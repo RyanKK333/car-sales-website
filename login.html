@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Car Sales — Login / Register</title>
+  <style>
+    :root{--primary:#1e1e2f;--accent:#ff9800;--muted:#666}
+    *{box-sizing:border-box;font-family:Inter, Arial, sans-serif}
+    body{margin:0;background:#f5f6fa;color:#222;}
+    .topbar{background:#fff;border-bottom:1px solid #e6e6ef;padding:12px 20px;display:flex;align-items:center;justify-content:space-between}
+    .topbar .brand{font-weight:700;color:var(--primary);letter-spacing:0.5px}
+    .topbar a{color:var(--primary);text-decoration:none;font-weight:600}
+    .wrap{max-width:980px;margin:34px auto;padding:0 16px}
+    .card{background:#fff;border-radius:12px;box-shadow:0 8px 30px rgba(20,20,50,0.06);overflow:hidden;display:grid;grid-template-columns:1fr 420px}
+    .card .info{padding:34px}
+    .card .info h2{color:var(--primary);margin-bottom:8px}
+    .card .info p{color:var(--muted);line-height:1.6}
+    .feature-list{margin-top:18px}
+    .feature{display:flex;gap:10px;align-items:center;margin:10px 0}
+    .feature .dot{width:10px;height:10px;border-radius:50%;background:var(--accent)}
+    .auth-area{background:linear-gradient(180deg,#ffffff, #fbfbfd);padding:26px}
+    .tabs{display:flex;gap:6px;margin-bottom:14px}
+    .tab{flex:1;text-align:center;padding:10px;border-radius:8px;background:#f1f3f8;cursor:pointer;font-weight:700}
+    .tab.active{background:linear-gradient(90deg,var(--primary),#2a2a48);color:#fff}
+    form{display:flex;flex-direction:column;gap:10px}
+    label{font-size:13px;color:#444}
+    input, select{padding:10px 12px;border-radius:8px;border:1px solid #d9d9e8;outline:none;font-size:14px}
+    input:focus{border-color:var(--primary)}
+    .row{display:flex;gap:10px}
+    .row .col{flex:1}
+    .btn{background:var(--primary);color:white;padding:10px;border:none;border-radius:8px;cursor:pointer;font-weight:700}
+    .btn.secondary{background:#fff;border:1px solid #ddd;color:var(--primary)}
+    .muted{color:var(--muted);font-size:13px}
+    .msg{padding:8px 10px;border-radius:8px;font-weight:600}
+    .msg.error{background:#ffecec;color:#b00020;border:1px solid #f2b6b6}
+    .msg.success{background:#e6ffef;color:#0a7a3b;border:1px solid #c6e8d0}
+    .small {font-size:13px;color:var(--muted)}
+    footer.pagefoot{text-align:center;padding:14px 8px;color:var(--muted);font-size:13px}
+    @media (max-width:980px){.card{grid-template-columns:1fr}.auth-area{order:2}}
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><a href="index.html">Car Sales</a></div>
+  <div><a href="index.html">Back to Home</a></div>
+</div>
+
+<div class="wrap">
+  <div class="card">
+
+    <!-- Left info -->
+    <div class="info">
+      <h2>Welcome back — let's get you moving 🚗</h2>
+      <p>Login to save favourites, contact sellers and list your car. New here? Register with a few details and start selling or buying instantly.</p>
+    </div>
+
+    <!-- Right auth -->
+    <div class="auth-area">
+      <div class="tabs">
+        <div id="tab-login" class="tab active" onclick="showTab('login')">LOGIN</div>
+        <div id="tab-register" class="tab" onclick="showTab('register')">REGISTER</div>
+      </div>
+
+      <div id="messageArea"></div>
+
+      <!-- LOGIN FORM -->
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <label>Email</label>
+        <input id="login-email" type="email" required placeholder="you@example.com" />
+        <label>Password</label>
+        <input id="login-password" type="password" required placeholder="Enter password" />
+        <button class="btn" type="submit">Login</button>
+        <div style="text-align:center;margin-top:8px" class="small">Or login with</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button type="button" class="btn secondary" onclick="firebaseGoogleSign()">Google</button>
+        </div>
+      </form>
+
+      <!-- REGISTER FORM -->
+      <form id="register-form" style="display:none" onsubmit="handleRegister(event)">
+        <label>Full name</label>
+        <input id="r-name" type="text" required placeholder="Your full name" />
+        <label>Email</label>
+        <input id="r-email" type="email" required placeholder="you@example.com" />
+        <label>Password</label>
+        <input id="r-password" type="password" required placeholder="Min 6 characters" />
+        <label>Confirm</label>
+        <input id="r-cpassword" type="password" required placeholder="Repeat password" />
+        <label>Phone</label>
+        <input id="r-phone" type="tel" placeholder="9XXXXXXXXX" />
+        <label>City</label>
+        <input id="r-city" type="text" placeholder="Chennai, Bangalore..." />
+        <button class="btn" type="submit">Create account</button>
+      </form>
+
+    </div>
+  </div>
+
+  <footer class="pagefoot">Need help? Chat with Buddy.</footer>
+</div>
+
+<!-- Scripts -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+  import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBlA3ggecf-aPBSnEWBy1Lz1PA6HfaJrfg",
+    authDomain: "carhub-63ab6.firebaseapp.com",
+    projectId: "carhub-63ab6",
+    storageBucket: "carhub-63ab6.firebasestorage.app",
+    messagingSenderId: "66544006573",
+    appId: "1:66544006573:web:ebc40e5e73e1aeed091d24"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  const provider = new GoogleAuthProvider();
+
+  function showTab(name){
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const tabLogin = document.getElementById('tab-login');
+    const tabRegister = document.getElementById('tab-register');
+    if(name==='register'){
+      loginForm.style.display='none'; registerForm.style.display='block';
+      tabLogin.classList.remove('active'); tabRegister.classList.add('active');
+    } else {
+      loginForm.style.display='block'; registerForm.style.display='none';
+      tabLogin.classList.add('active'); tabRegister.classList.remove('active');
+    }
+    document.getElementById('messageArea').innerHTML='';
+  }
+
+  function showMessage(text,type='error'){
+    const area = document.getElementById('messageArea');
+    area.innerHTML = `<div class="msg ${type==='error'?'error':'success'}">${text}</div>`;
+    setTimeout(()=>{ area.innerHTML=''; }, 6000);
+  }
+
+  function validateEmail(email){ return /^\S+@\S+\.\S+$/.test(email); }
+
+  async function handleRegister(e){
+    e.preventDefault();
+    const name=document.getElementById('r-name').value.trim();
+    const email=document.getElementById('r-email').value.trim();
+    const password=document.getElementById('r-password').value;
+    const cpassword=document.getElementById('r-cpassword').value;
+    const phone=document.getElementById('r-phone').value.trim();
+    const city=document.getElementById('r-city').value.trim();
+
+    if(!name||!email||!password||!cpassword){ showMessage('Please fill required fields'); return; }
+    if(!validateEmail(email)){ showMessage('Enter a valid email'); return; }
+    if(password.length<6){ showMessage('Password must be at least 6 characters'); return; }
+    if(password!==cpassword){ showMessage('Passwords do not match'); return; }
+
+    try{
+      showMessage('Registering...','success');
+      const user = await createUserWithEmailAndPassword(auth,email,password);
+      await updateProfile(user.user,{displayName:name});
+      await setDoc(doc(db,'users',user.user.uid),{name,email,phone,city,createdAt:new Date()});
+      showMessage('Registered successfully — redirecting...','success');
+      setTimeout(()=>window.location.href='index.html',1200);
+    } catch(err){ console.error(err); showMessage(err.message || 'Registration failed'); }
+  }
+
+  async function handleLogin(e){
+    e.preventDefault();
+    const email=document.getElementById('login-email').value.trim();
+    const password=document.getElementById('login-password').value;
+    if(!validateEmail(email)){ showMessage('Enter a valid email'); return; }
+    if(!password){ showMessage('Enter your password'); return; }
+    try{
+      showMessage('Signing in...','success');
+      const user = await signInWithEmailAndPassword(auth,email,password);
+      showMessage('Logged in — redirecting...','success');
+      setTimeout(()=>window.location.href='index.html',900);
+    } catch(err){ console.error(err); showMessage(err.message || 'Login failed'); }
+  }
+
+  async function firebaseGoogleSign(){
+    try{
+      const result = await signInWithPopup(auth,provider);
+      await setDoc(doc(db,'users',result.user.uid),{name:result.user.displayName,email:result.user.email},{merge:true});
+      showMessage('Logged in with Google — redirecting...','success');
+      setTimeout(()=>window.location.href='index.html',900);
+    } catch(err){ console.error(err); showMessage(err.message || 'Google login failed'); }
+  }
+  // Make functions global so HTML can access them
+window.handleRegister = handleRegister;
+window.handleLogin = handleLogin;
+window.firebaseGoogleSign = firebaseGoogleSign;
+window.showTab = showTab;
+
+</script>
+</body>
+</html>
