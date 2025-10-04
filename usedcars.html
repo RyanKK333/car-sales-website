@@ -1,54 +1,115 @@
-<!-- USED CARS PAGE: usedcars.html (replace car data with used cars) -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Used Cars</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Used Cars — Car Sales</title>
+  <style>
+    body{font-family:Arial,sans-serif;margin:0;background:#f5f6fa;color:#222;}
+    .container{max-width:1000px;margin:40px auto;padding:0 16px;}
+    h2{text-align:center;color:#1e1e2f;}
+    .filters{display:flex;gap:12px;justify-content:center;margin-bottom:20px;}
+    select{padding:10px;border-radius:6px;border:1px solid #ccc;font-size:14px;}
+    .cars-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px;}
+    .car-card{background:#fff;padding:16px;border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,0.1);}
+    .car-card h3{margin:0 0 6px 0;color:#1e1e2f;}
+    .car-card p{margin:4px 0;color:#555;font-size:14px;}
+    .msg{padding:10px;text-align:center;font-weight:600;border-radius:6px;}
+    .msg.error{background:#ffecec;color:#b00020;border:1px solid #f2b6b6;}
+    .msg.success{background:#e6ffef;color:#0a7a3b;border:1px solid #c6e8d0;}
+  </style>
 </head>
 <body>
-  <!-- Navbar same as newcars.html -->
-  <!-- ...same navbar-top and navbar-bottom here... -->
-   <!-- Navbar -->
 
-  <div class="car-listings">
-    <h2>Used Cars</h2>
+<div class="container">
+  <h2>Available Used Cars</h2>
+  <div id="messageArea"></div>
 
-    <!-- Example used car cards -->
-    <div class="car-card">
-      <div class="car-image"><img src="images/used1.jpg" alt="Honda City 2018"></div>
-      <div class="car-details">
-        <h2>Honda City 2018</h2>
-        <p><strong>Price:</strong> ₹8.5 Lakh</p>
-        <p><strong>Fuel:</strong> Petrol</p>
-        <p><strong>Engine:</strong> 1498 CC</p>
-        <p><strong>Year:</strong> 2018</p>
-        <p><strong>Condition:</strong> Excellent</p>
-      </div>
-    </div>
+  <div class="filters">
+    <select id="filter-city" onchange="renderCars()">
+      <option value="">All Cities</option>
+      <option value="Chennai">Chennai</option>
+      <option value="Bangalore">Bangalore</option>
+      <option value="Mumbai">Mumbai</option>
+      <option value="Delhi">Delhi</option>
+    </select>
 
-    <div class="car-card">
-      <div class="car-image"><img src="images/used2.jpg" alt="Maruti Swift 2019"></div>
-      <div class="car-details">
-        <h2>Maruti Swift 2019</h2>
-        <p><strong>Price:</strong> ₹5.2 Lakh</p>
-        <p><strong>Fuel:</strong> Petrol</p>
-        <p><strong>Engine:</strong> 1197 CC</p>
-        <p><strong>Year:</strong> 2019</p>
-        <p><strong>Condition:</strong> Good</p>
-      </div>
-    </div>
-
+    <select id="filter-fuel" onchange="renderCars()">
+      <option value="">All Fuel Types</option>
+      <option value="Petrol">Petrol</option>
+      <option value="Diesel">Diesel</option>
+      <option value="CNG">CNG</option>
+      <option value="Electric">Electric</option>
+    </select>
   </div>
 
-  <footer class="footer">
-    <div class="footer-content">
-      <p>&copy; 2025 CarHub. All Rights Reserved.</p>
-      <p>Designed by Buddy & Kanchi 🚀</p>
-    </div>
-  </footer>
+  <div class="cars-grid" id="cars-grid">
+    <!-- Cars will appear here -->
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBlA3ggecf-aPBSnEWBy1Lz1PA6HfaJrfg",
+    authDomain: "carhub-63ab6.firebaseapp.com",
+    projectId: "carhub-63ab6",
+    storageBucket: "carhub-63ab6.firebasestorage.app",
+    messagingSenderId: "66544006573",
+    appId: "1:66544006573:web:ebc40e5e73e1aeed091d24"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  let usedCars = [];
+
+  async function fetchCars(){
+    try{
+      const q = query(collection(db,'usedCars'), orderBy('createdAt','desc'));
+      const snapshot = await getDocs(q);
+      usedCars = snapshot.docs.map(doc=>({id:doc.id, ...doc.data()}));
+      renderCars();
+    } catch(err){
+      console.error(err);
+      showMessage(err.message || 'Failed to fetch cars','error');
+    }
+  }
+
+  function renderCars(){
+    const cityFilter = document.getElementById('filter-city').value;
+    const fuelFilter = document.getElementById('filter-fuel').value;
+    const grid = document.getElementById('cars-grid');
+
+    let filtered = usedCars;
+    if(cityFilter) filtered = filtered.filter(c=>c.city===cityFilter);
+    if(fuelFilter) filtered = filtered.filter(c=>c.fuel===fuelFilter);
+
+    if(filtered.length===0){
+      grid.innerHTML='<p style="text-align:center;color:#666">No cars found.</p>';
+      return;
+    }
+
+    grid.innerHTML = filtered.map(c => `
+      <div class="car-card">
+        <h3>${c.name} - ${c.model}</h3>
+        <p><strong>Price:</strong> ₹${c.price}</p>
+        <p><strong>Fuel:</strong> ${c.fuel}</p>
+        <p><strong>City:</strong> ${c.city}</p>
+      </div>
+    `).join('');
+  }
+
+  function showMessage(text,type='error'){
+    const area = document.getElementById('messageArea');
+    area.innerHTML = `<div class="msg ${type==='error'?'error':'success'}">${text}</div>`;
+    setTimeout(()=>{ area.innerHTML=''; }, 4000);
+  }
+
+  fetchCars();
+</script>
+
 </body>
 </html>
-
-
